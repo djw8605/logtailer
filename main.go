@@ -7,7 +7,6 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/jessevdk/go-flags"
 	log "github.com/sirupsen/logrus"
-	auth 
 )
 
 //type WatchFiles struct {
@@ -31,24 +30,34 @@ var parser = flags.NewParser(&options, flags.Default)
 
 // main
 func main() {
-	auth.init()
+
 	var err error
+	parser.SubcommandsOptional = true
 	if _, err = parser.Parse(); err != nil {
 		// err will tell us if the user just did a "-h"
 		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
 			os.Exit(0)
 		} else {
-			fmt.Println(err)
 			os.Exit(1)
 		}
 	}
 
+	log.SetFormatter(&log.TextFormatter{
+		FullTimestamp:          true,
+		DisableLevelTruncation: true,
+	})
+
 	if options.Debug {
-		setLogging(log.DebugLevel)
+		log.SetLevel(log.DebugLevel)
+		log.Debug("Setting loglevel to Debug")
 	} else {
-		setLogging(log.WarnLevel)
+		log.SetLevel(log.WarnLevel)
 	}
 
+	// Read in the configuration file
+	var config Config
+	config.ReadConfig(options.Config)
+	log.Debugf(config.Amqp)
 	// Read in the watched files from the yaml
 	watchedFile := "./stuff"
 	//watchedFile := args[0]
