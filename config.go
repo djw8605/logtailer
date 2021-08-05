@@ -9,7 +9,11 @@ import (
 )
 
 type Config struct {
-	Amqp string `yaml:amqp`
+	Amqp struct {
+		User string
+		Host string
+	}
+	CredDir string `yaml:creddir`
 }
 
 // Read in the configuration file

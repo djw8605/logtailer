@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
+	gocron "github.com/go-co-op/gocron"
 	"github.com/jessevdk/go-flags"
 	log "github.com/sirupsen/logrus"
 )
@@ -48,16 +50,24 @@ func main() {
 	})
 
 	if options.Debug {
-		log.SetLevel(log.DebugLevel)
+		setLogging(log.DebugLevel)
 		log.Debug("Setting loglevel to Debug")
 	} else {
-		log.SetLevel(log.WarnLevel)
+		setLogging(log.WarnLevel)
 	}
 
 	// Read in the configuration file
 	var config Config
 	config.ReadConfig(options.Config)
-	log.Debugf(config.Amqp)
+	log.Debugf(config.Amqp.Host)
+	s := gocron.NewScheduler(time.UTC)
+	messageBus := make(chan string)
+	credentialBus := make(chan string)
+	initialCred := "Blah"
+	go StartAmqp(config, initialCred, messageBus, credentialBus)
+	s.Every(1).Second().SingletonMode().Do(renewCred, credentialBus)
+	s.StartAsync()
+
 	// Read in the watched files from the yaml
 	watchedFile := "./stuff"
 	//watchedFile := args[0]
@@ -101,5 +111,11 @@ func setLogging(logLevel log.Level) error {
 	textFormatter.DisableLevelTruncation = true
 	textFormatter.FullTimestamp = true
 	log.SetFormatter(&textFormatter)
+	log.SetLevel(logLevel)
 	return nil
+}
+
+func renewCred(param chan<- string) {
+	param <- "Hello"
+	log.Debugln("Renewing cred")
 }
